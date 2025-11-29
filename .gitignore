@@ -2,4 +2,4 @@
 /bin/
 /.env
 *.log
-/frontend/src/.env
+/frontend/.env
