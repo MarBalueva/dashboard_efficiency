@@ -1,0 +1,93 @@
+:root{
+  --bg: #E8EDF0;
+  --btn-indigo: #4F46E5;
+  --btn-text: #FFFFFF;
+  --text: #0F172A;
+  --input-text: #6B7280; /* серый текст внутри полей */
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: 'Nunito', sans-serif;
+  background-color: var(--bg);
+}
+
+#app {
+  height: 90%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+}
+
+/* Центрируем блоки */
+.auth-wrapper {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Карточка */
+.auth-card {
+  width: 380px;
+  background: white;
+  border-radius: 12px;
+  padding: 28px;
+  box-shadow: 0 8px 24px rgba(15,23,42,0.08);
+}
+
+/* Поля ввода */
+.input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 14px;
+  border-radius: 8px;
+  border: 1px solid #D1D5DB;
+  background: #FFFFFF;
+  color: var(--input-text);
+  font-size: 15px;
+  box-sizing: border-box;
+}
+
+/* Цвет placeholder */
+.input::placeholder {
+  color: #9CA3AF;
+}
+
+.input--error {
+  border-color: #EF4444 !important;
+  background: #FFF1F2;
+}
+.error-text { margin-top: 12px; font-size: 14px; }
+
+/* Кнопка */
+.btn-indigo {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--btn-indigo);
+  color: #FFF;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+.btn-indigo:hover {
+  opacity: 0.95;
+}
+
+/* Ссылки */
+.hint {
+  text-align: center;
+  font-size: 14px;
+  margin-top: 12px;
+}
+
+.hint a {
+  color: var(--btn-indigo);
+  font-weight: 600;
+  text-decoration: none;
+}
