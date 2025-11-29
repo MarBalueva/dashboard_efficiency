@@ -2,7 +2,7 @@ package routes
 
 import (
 	"github.com/MarBalueva/dashboard_efficiency/internal/api"
-	"github.com/MarBalueva/dashboard_efficiency/internal/api/controllers"
+	"github.com/MarBalueva/dashboard_efficiency/internal/controllers"
 	"github.com/MarBalueva/dashboard_efficiency/internal/middleware"
 	"github.com/gin-gonic/gin"
 )

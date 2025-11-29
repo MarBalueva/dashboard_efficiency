@@ -1,5 +1,37 @@
-/vendor/
+# Go
 /bin/
+/vendor/
+/*.exe
+/*.dll
+/*.so
+/*.test
+/*.out
 /.env
+*.env
 *.log
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.DS_Store
+
+# Frontend (Vue)
+/frontend/node_modules/
+/frontend/dist/
 /frontend/.env
+/frontend/.env.local
+/frontend/.cache/
+/frontend/.temp/
+/frontend/*.log
+
+# npm debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Misc / OS files
+*.bak
+*.tmp
+*.old
+Thumbs.db
