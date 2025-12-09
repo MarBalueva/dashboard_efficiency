@@ -16,6 +16,58 @@ definitions:
       password:
         type: string
     type: object
+  models.Employee:
+    type: object
+  models.EmployeeSwagger:
+    properties:
+      absences_per_year:
+        type: integer
+      age:
+        type: integer
+      annual_salary:
+        type: number
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      department:
+        type: string
+      employee_id:
+        type: string
+      id:
+        type: integer
+      job_level:
+        type: string
+      job_satisfaction:
+        type: integer
+      meetings_per_week:
+        type: integer
+      monthly_hours_worked:
+        type: integer
+      overtime_hours_per_week:
+        type: number
+      productivity_score:
+        type: number
+      remote_work:
+        type: boolean
+      tasks_completed_per_day:
+        type: integer
+      updated_at:
+        type: string
+      work_life_balance:
+        type: string
+      years_at_company:
+        type: integer
+    type: object
+  models.ProfileUpdateRequest:
+    properties:
+      name:
+        example: Иван
+        type: string
+      password:
+        example: secret123
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact:
@@ -29,11 +81,243 @@ info:
   title: Employee Dashboard API
   version: "1.0"
 paths:
+  /api/dashboard/summary:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает средние показатели сотрудников текущего пользователя
+      parameters:
+      - description: Начало периода
+        in: query
+        name: date_from
+        type: string
+      - description: Конец периода
+        in: query
+        name: date_to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              format: float64
+              type: number
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение сводных показателей эффективности
+      tags:
+      - dashboard
+  /api/employees:
+    get:
+      description: Возвращает все загруженные данные пользователя
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.EmployeeSwagger'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Список сотрудников текущего пользователя
+      tags:
+      - employees
+  /api/profile:
+    get:
+      description: Возвращает email и имя пользователя, авторизованного через JWT
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              allOf:
+              - type: string
+              - properties:
+                  email:
+                    type: string
+                  name:
+                    type: string
+                type: object
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              allOf:
+              - type: string
+              - properties:
+                  message:
+                    type: string
+                type: object
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получить профиль текущего пользователя
+      tags:
+      - profile
+    put:
+      consumes:
+      - application/json
+      description: Позволяет изменить имя и/или пароль текущего пользователя
+      parameters:
+      - description: Данные для обновления
+        in: body
+        name: profile
+        required: true
+        schema:
+          $ref: '#/definitions/models.ProfileUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              allOf:
+              - type: string
+              - properties:
+                  message:
+                    type: string
+                type: object
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              allOf:
+              - type: string
+              - properties:
+                  message:
+                    type: string
+                type: object
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              allOf:
+              - type: string
+              - properties:
+                  message:
+                    type: string
+                type: object
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              allOf:
+              - type: string
+              - properties:
+                  message:
+                    type: string
+                type: object
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Обновить профиль пользователя
+      tags:
+      - profile
+  /api/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Загружает CSV или Excel файл и возвращает данные для предпросмотра,
+        без записи в БД
+      parameters:
+      - description: Файл CSV/Excel
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Данные для предпросмотра
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Ошибка при обработке файла
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Пользователь не авторизован
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Предпросмотр загруженных данных
+      tags:
+      - upload
+  /api/upload/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Получает массив объектов Employee и сохраняет их в БД
+      parameters:
+      - description: Данные сотрудников для записи
+        in: body
+        name: data
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/models.Employee'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Сообщение о добавленных/обновленных записях
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Ошибка при обработке данных
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Пользователь не авторизован
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Подтверждение загрузки данных сотрудников
+      tags:
+      - upload
   /auth/login:
     post:
       consumes:
       - application/json
-      description: Aутентификация пользователя и выдача JWT-токена
+      description: Аутентификация пользователя и выдача JWT-токена
       parameters:
       - description: Login payload
         in: body
@@ -46,6 +330,12 @@ paths:
       responses:
         "200":
           description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
           schema:
             additionalProperties:
               type: string
@@ -89,4 +379,9 @@ paths:
       summary: Регистрация нового пользователя
       tags:
       - auth
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

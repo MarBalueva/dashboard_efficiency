@@ -27,6 +27,9 @@ import (
 
 // @host localhost:8080
 // @BasePath /
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
@@ -51,7 +54,6 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}
 	r.Use(cors.New(corsCfg))
-	routes.AuthRoutes(r)
 	routes.Register(r)
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

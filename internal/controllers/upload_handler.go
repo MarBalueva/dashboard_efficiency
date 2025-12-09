@@ -14,122 +14,175 @@ import (
 	"github.com/MarBalueva/dashboard_efficiency/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/tealeg/xlsx"
+	"gorm.io/gorm/clause"
 )
 
-// UploadEmployees обрабатывает загрузку CSV/Excel с данными сотрудников
+// UploadEmployees обрабатывает загрузку CSV/Excel для предпросмотра
+// @Summary Предпросмотр загруженных данных
+// @Description Загружает CSV или Excel файл и возвращает данные для предпросмотра, без записи в БД
+// @Tags upload
+// @Accept multipart/form-data
+// @Produce json
+// @Param file formData file true "Файл CSV/Excel"
+// @Success 200 {object} map[string]interface{} "Данные для предпросмотра"
+// @Failure 400 {object} map[string]string "Ошибка при обработке файла"
+// @Failure 401 {object} map[string]string "Пользователь не авторизован"
+// @Router /api/upload [post]
+// @Security BearerAuth
 func UploadEmployees(c *gin.Context) {
-	// Получаем user_id из контекста (middleware авторизации)
 	userIDRaw, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized"})
 		return
 	}
-	userID := userIDRaw.(uint)
 
-	// Получаем файл
+	userIDFloat, ok := userIDRaw.(float64)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "invalid user id"})
+		return
+	}
+	userID := uint(userIDFloat)
+
 	file, err := c.FormFile("file")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "файл обязателен"})
 		return
 	}
 
-	// Сохраняем временно
 	tempPath := fmt.Sprintf("./tmp/%d_%s", time.Now().UnixNano(), file.Filename)
-	if err := os.MkdirAll("./tmp", os.ModePerm); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "не удалось создать временную папку"})
-		return
-	}
+	os.MkdirAll("./tmp", os.ModePerm)
+	c.SaveUploadedFile(file, tempPath)
+	defer os.Remove(tempPath)
 
-	if err := c.SaveUploadedFile(file, tempPath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "не удалось сохранить файл"})
-		return
-	}
-	defer os.Remove(tempPath) // удалить файл после обработки
+	var rows []models.Employee
+	var parseErr error
 
-	// Определяем расширение
 	if strings.HasSuffix(file.Filename, ".csv") {
-		processCSV(tempPath, userID, c)
+		rows, parseErr = processCSV(tempPath, userID)
 	} else if strings.HasSuffix(file.Filename, ".xlsx") || strings.HasSuffix(file.Filename, ".xls") {
-		processExcel(tempPath, userID, c)
+		rows, parseErr = processExcel(tempPath, userID)
 	} else {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "только CSV или Excel"})
+		return
 	}
+
+	if parseErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": parseErr.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"preview": rows,
+	})
 }
 
-// --- CSV обработка ---
-func processCSV(path string, userID uint, c *gin.Context) {
-	f, err := os.Open(path)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "не удалось открыть CSV"})
+// @Summary Подтверждение загрузки данных сотрудников
+// @Description Получает массив объектов Employee и сохраняет их в БД
+// @Tags upload
+// @Accept json
+// @Produce json
+// @Param data body []models.Employee true "Данные сотрудников для записи"
+// @Success 200 {object} map[string]interface{} "Сообщение о добавленных/обновленных записях"
+// @Failure 400 {object} map[string]string "Ошибка при обработке данных"
+// @Failure 401 {object} map[string]string "Пользователь не авторизован"
+// @Router /api/upload/confirm [post]
+// @Security BearerAuth
+func ConfirmUpload(c *gin.Context) {
+	userIDRaw, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized"})
 		return
 	}
-	defer f.Close()
 
-	reader := csv.NewReader(f)
-	reader.TrimLeadingSpace = true
+	userIDFloat, ok := userIDRaw.(float64)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "invalid user id"})
+		return
+	}
+	userID := uint(userIDFloat)
 
-	// Пропускаем заголовок
-	_, err = reader.Read() // пропускаем заголовок
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "не удалось прочитать заголовок CSV"})
+	var rows []models.Employee
+	if err := c.ShouldBindJSON(&rows); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
 
-	var added, skipped int
-	var errors []string
+	added := 0
+	errors := []string{}
 
-	for {
-		row, err := reader.Read()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			errors = append(errors, fmt.Sprintf("строка %d: %v", added+skipped+2, err))
-			continue
-		}
-
-		emp, err := parseEmployeeRow(row)
-		if err != nil {
-			errors = append(errors, fmt.Sprintf("строка %d: %v", added+skipped+2, err))
-			skipped++
-			continue
-		}
-
+	for _, emp := range rows {
 		emp.UserID = userID
 		emp.UploadedAt = time.Now()
 
-		if err := db.DB.Create(&emp).Error; err != nil {
-			errors = append(errors, fmt.Sprintf("строка %d: %v", added+skipped+2, err))
-			skipped++
+		// Если есть EmployeeID — обновляем, иначе создаем
+		if err := db.DB.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "employee_id"}, {Name: "user_id"}},
+			UpdateAll: true,
+		}).Create(&emp).Error; err != nil {
+			errors = append(errors, fmt.Sprintf("Ошибка EmployeeID=%s: %v", emp.EmployeeID, err))
 			continue
 		}
 		added++
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "обработка завершена",
-		"added":   added,
-		"skipped": skipped,
+		"message": fmt.Sprintf("Добавлено/обновлено %d записей", added),
 		"errors":  errors,
 	})
 }
 
-// --- Excel обработка ---
-func processExcel(path string, userID uint, c *gin.Context) {
+func processCSV(path string, userID uint) ([]models.Employee, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("не удалось открыть CSV")
+	}
+	defer f.Close()
+
+	reader := csv.NewReader(f)
+	reader.TrimLeadingSpace = true
+
+	_, err = reader.Read() // skip header
+	if err != nil {
+		return nil, fmt.Errorf("не удалось прочитать заголовок CSV")
+	}
+
+	var rows []models.Employee
+	for {
+		row, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			continue
+		}
+
+		emp, err := parseEmployeeRow(row)
+		if err != nil {
+			continue
+		}
+
+		emp.UserID = userID
+		rows = append(rows, emp)
+
+	}
+
+	return rows, nil
+}
+
+// --- Excel обработка с обновлением существующих ---
+func processExcel(path string, userID uint) ([]models.Employee, error) {
 	xlFile, err := xlsx.OpenFile(path)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "не удалось открыть Excel"})
-		return
+		return nil, fmt.Errorf("не удалось открыть Excel")
 	}
 
 	sheet := xlFile.Sheets[0]
 
-	var added, skipped int
-	var errors []string
+	var rows []models.Employee
 
 	for i, row := range sheet.Rows {
 		if i == 0 {
-			continue // заголовок
+			continue
 		}
 
 		cells := make([]string, len(row.Cells))
@@ -139,28 +192,14 @@ func processExcel(path string, userID uint, c *gin.Context) {
 
 		emp, err := parseEmployeeRow(cells)
 		if err != nil {
-			errors = append(errors, fmt.Sprintf("строка %d: %v", i+1, err))
-			skipped++
 			continue
 		}
 
 		emp.UserID = userID
-		emp.UploadedAt = time.Now()
-
-		if err := db.DB.Create(&emp).Error; err != nil {
-			errors = append(errors, fmt.Sprintf("строка %d: %v", i+1, err))
-			skipped++
-			continue
-		}
-		added++
+		rows = append(rows, emp)
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "обработка завершена",
-		"added":   added,
-		"skipped": skipped,
-		"errors":  errors,
-	})
+	return rows, nil
 }
 
 // --- Парсинг строки в Employee ---
@@ -181,7 +220,9 @@ func parseEmployeeRow(row []string) (models.Employee, error) {
 	absences, _ := strconv.Atoi(row[14])
 
 	remote := false
-	if strings.ToLower(row[6]) == "yes" || strings.ToLower(row[6]) == "true" {
+	if strings.ToLower(row[6]) == "yes" ||
+		strings.ToLower(row[6]) == "true" ||
+		strings.ToLower(row[6]) == "hybrid" {
 		remote = true
 	}
 

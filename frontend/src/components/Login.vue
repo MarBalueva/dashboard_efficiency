@@ -117,7 +117,7 @@ async function login() {
     serverIsError.value = false
 
     // краткая пауза, чтобы пользователь увидел сообщение
-    setTimeout(() => router.push('/'), 400)
+    setTimeout(() => router.push('/dashboard'), 400)
   } catch (err) {
     // ожидаем формат: { error: "code", message: "текст" }
     const resp = err.response

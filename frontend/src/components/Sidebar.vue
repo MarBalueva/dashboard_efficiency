@@ -33,21 +33,30 @@
                 fill="currentColor"/>
         </svg>
       </router-link>
+
+      <!-- Новый пункт: список сотрудников -->
+      <router-link
+        to="/employees"
+        class="icon-btn"
+        :class="{ active: isActive('/employees') }"
+      >
+        <svg width="25" height="25" viewBox="0 0 24 24" fill="none">
+          <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 2.07 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" fill="currentColor"/>
+        </svg>
+      </router-link>
     </nav>
 
     <!-- Нижняя часть -->
     <div class="sidebar-bottom">
-      <router-link to="/profile" class="icon-btn">
+      <router-link to="/profile" class="icon-btn" :class="{ active: isActive('/profile') }">
         <svg width="25" height="25" viewBox="0 0 24 24" fill="none">
-          <path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-4 0-8 2-8 6v2h16v-2c0-4-4-6-8-6z"
-                fill="currentColor"/>
+          <path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-4 0-8 2-8 6v2h16v-2c0-4-4-6-8-6z" fill="currentColor"/>
         </svg>
       </router-link>
 
       <button class="icon-btn logout" @click="logout">
         <svg width="25" height="25" viewBox="0 0 24 24" fill="none">
-          <path d="M16 13v-2H7V8l-5 4 5 4v-3zM20 3h-8v2h8v14h-8v2h8c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"
-                fill="currentColor"/>
+          <path d="M16 13v-2H7V8l-5 4 5 4v-3zM20 3h-8v2h8v14h-8v2h8c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z" fill="currentColor"/>
         </svg>
       </button>
     </div>
@@ -77,48 +86,24 @@ function logout() {
   height: 90vh;
   background: #ffffff;
   position: fixed;
-  left: 25px;       /* отступ слева */
+  left: 25px;
   top: 50%;
-  transform: translateY(-50%); /* вертикальное центрирование */
+  transform: translateY(-50%);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   padding: 20px 0;
   box-shadow: 2px 0 8px rgba(15,23,42,0.05);
-  border-radius: 20px; /* все края закруглены */
+  border-radius: 20px;
 }
 
-/* Контент страницы */
-.main-content {
-  margin-left: 105px; /* 25px отступ + 80px ширина сайдбара */
-  padding: 20px;
-}
-
-/* Верхний логотип */
-.company-icon {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-/* Среднее меню */
-.sidebar-middle {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-top: 20px;
-  align-items: center;
-}
-
-/* Нижняя часть */
-.sidebar-bottom {
+.sidebar-middle, .sidebar-bottom {
   display: flex;
   flex-direction: column;
   gap: 16px;
   align-items: center;
 }
 
-/* Кнопки-иконки */
 .icon-btn {
   width: 48px;
   height: 48px;
