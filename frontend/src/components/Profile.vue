@@ -5,31 +5,63 @@
     <main class="content">
       <header class="page-header">
         <h1>Профиль пользователя</h1>
-        <p class="subtitle">Измените имя или пароль</p>
+        <p class="subtitle">Вы можете изменить ФИО и пароль</p>
       </header>
 
       <section class="profile-section">
         <div class="profile-form">
+          <!-- Логин (readonly) -->
           <div class="profile-field">
-            <label>Email:</label>
-            <input type="text" :value="user.email" readonly />
+            <label>Логин</label>
+            <input type="text" :value="profile.login" readonly />
           </div>
 
           <div class="profile-field">
-            <label>Имя:</label>
-            <input type="text" v-model="form.name" placeholder="Введите новое имя" />
+            <label>Фамилия</label>
+            <input
+              type="text"
+              v-model="form.last_name"
+              placeholder="Введите фамилию"
+            />
           </div>
 
           <div class="profile-field">
-            <label>Новый пароль:</label>
-            <input type="password" v-model="form.password" placeholder="Введите новый пароль" />
+            <label>Имя</label>
+            <input
+              type="text"
+              v-model="form.first_name"
+              placeholder="Введите имя"
+            />
+          </div>
+
+          <div class="profile-field">
+            <label>Отчество</label>
+            <input
+              type="text"
+              v-model="form.middle_name"
+              placeholder="Введите отчество"
+            />
+          </div>
+
+          <div class="profile-field">
+            <label>Новый пароль</label>
+            <input
+              type="password"
+              v-model="form.password"
+              placeholder="Введите новый пароль"
+            />
           </div>
 
           <button class="btn-indigo" @click="updateProfile" :disabled="loading">
             {{ loading ? 'Сохраняем...' : 'Сохранить изменения' }}
           </button>
 
-          <div v-if="message" :class="['message', error ? 'error' : 'success']">{{ message }}</div>
+          <div
+            v-if="message"
+            :class="['message', error ? 'error' : 'success']"
+          >
+            {{ message }}
+          </div>
         </div>
       </section>
     </main>
@@ -41,20 +73,38 @@ import { ref, onMounted } from 'vue'
 import Sidebar from '../components/Sidebar.vue'
 import api from '../axios'
 
-const user = ref({ email: '', name: '' })
-const form = ref({ name: '', password: '' })
+const profile = ref({
+  login: '',
+  employee: {
+    last_name: '',
+    first_name: '',
+    middle_name: ''
+  }
+})
+
+const form = ref({
+  last_name: '',
+  first_name: '',
+  middle_name: '',
+  password: ''
+})
+
 const loading = ref(false)
 const message = ref('')
 const error = ref(false)
 
-async function fetchUser() {
+async function fetchProfile() {
   loading.value = true
+  error.value = false
   try {
     const res = await api.get('/api/profile')
-    user.value = res.data
-    form.value.name = res.data.name
+    profile.value = res.data
+
+    form.value.last_name = res.data.employee.last_name
+    form.value.first_name = res.data.employee.first_name
+    form.value.middle_name = res.data.employee.middle_name
   } catch (err) {
-    message.value = err.response?.data?.message || 'Ошибка загрузки профиля'
+    message.value = err.response?.data?.error || 'Ошибка загрузки профиля'
     error.value = true
   } finally {
     loading.value = false
@@ -65,21 +115,36 @@ async function updateProfile() {
   loading.value = true
   message.value = ''
   error.value = false
+
   try {
-    const payload = { name: form.value.name, password: form.value.password }
+    const payload = {
+      last_name: form.value.last_name,
+      first_name: form.value.first_name,
+      middle_name: form.value.middle_name
+    }
+
+    if (form.value.password) {
+      payload.password = form.value.password
+    }
+
     const res = await api.put('/api/profile', payload)
-    message.value = res.data.message
-    user.value.name = form.value.name
+
+    message.value = res.data.message || 'Профиль обновлён'
+
+    profile.value.employee.last_name = form.value.last_name
+    profile.value.employee.first_name = form.value.first_name
+    profile.value.employee.middle_name = form.value.middle_name
+
     form.value.password = ''
   } catch (err) {
-    message.value = err.response?.data?.message || 'Ошибка при обновлении профиля'
+    message.value = err.response?.data?.error || 'Ошибка при обновлении профиля'
     error.value = true
   } finally {
     loading.value = false
   }
 }
 
-onMounted(fetchUser)
+onMounted(fetchProfile)
 </script>
 
 <style scoped>
@@ -89,13 +154,13 @@ onMounted(fetchUser)
 
 .profile-section {
   display: flex;
-  justify-content: center; /* центрирование формы */
+  justify-content: center; 
   padding: 20px;
 }
 
 .profile-form {
   width: 100%;
-  max-width: 600px; /* шире форма */
+  max-width: 600px;
   background:#fff;
   padding: 36px;
   margin: 0 auto;
@@ -114,7 +179,7 @@ onMounted(fetchUser)
 
 .profile-field input {
   width: 100%;
-  padding: 10px 14px; /* совпадает с search-input */
+  padding: 10px 14px; 
   border-radius: 8px;
   border: 1px solid #cbd5e1;
   background: #fff;
@@ -124,13 +189,13 @@ onMounted(fetchUser)
 }
 
 .profile-field input::placeholder {
-  color: #94a3b8;       /* серый как в поле поиска */
-  opacity: 1;            /* гарантируем видимость в Chrome/Firefox */
+  color: #94a3b8;      
+  opacity: 1;           
 }
 
 .profile-field input:focus {
   outline: none;
-  border-color: #4F46E5; /* синий акцент */
+  border-color: #4F46E5;
   box-shadow: 0 0 0 2px rgba(79,70,229,0.2);
 }
 

@@ -1,68 +1,207 @@
 basePath: /
 definitions:
-  controllers.LoginRequest:
+  controllers.DashboardSummaryResponse:
     properties:
-      email:
-        type: string
-      password:
-        type: string
-    type: object
-  controllers.RegisterRequest:
-    properties:
-      email:
-        type: string
-      name:
-        type: string
-      password:
-        type: string
-    type: object
-  models.Employee:
-    type: object
-  models.EmployeeSwagger:
-    properties:
-      absences_per_year:
-        type: integer
-      age:
-        type: integer
-      annual_salary:
+      avgLoad:
         type: number
-      created_at:
-        type: string
-      deleted_at:
-        type: string
+      avgProductivity:
+        type: number
+      deptEfficiency:
+        items:
+          $ref: '#/definitions/controllers.DeptEfficiencyItem'
+        type: array
+      monthlyStats:
+        items:
+          $ref: '#/definitions/controllers.MonthlyStat'
+        type: array
+      overtime:
+        type: number
+      satisfaction:
+        type: number
+      topEfficiency:
+        items:
+          $ref: '#/definitions/controllers.TopEfficiencyItem'
+        type: array
+      topOvertime:
+        items:
+          $ref: '#/definitions/controllers.TopOvertimeItem'
+        type: array
+    type: object
+  controllers.DeptEfficiencyItem:
+    properties:
+      avg_productivity:
+        type: number
       department:
         type: string
-      employee_id:
+      job_level:
+        type: string
+    type: object
+  controllers.LoginRequest:
+    properties:
+      login:
+        type: string
+      password:
+        type: string
+    type: object
+  controllers.MonthlyStat:
+    properties:
+      load:
+        type: number
+      month:
+        type: string
+      overtime:
+        type: number
+    type: object
+  controllers.TopEfficiencyItem:
+    properties:
+      name:
+        type: string
+      overtime:
+        type: number
+      productivity:
+        type: number
+      tasks:
+        type: integer
+    type: object
+  controllers.TopOvertimeItem:
+    properties:
+      job_satisfaction:
+        type: integer
+      name:
+        type: string
+      overtime_hours:
+        type: number
+      tasks_completed_per_day:
+        type: integer
+    type: object
+  models.AccessGroup:
+    properties:
+      code:
+        type: string
+      createdAt:
         type: string
       id:
         type: integer
-      job_level:
+      name:
         type: string
-      job_satisfaction:
+    type: object
+  models.Department:
+    properties:
+      code:
+        type: string
+      createdAt:
+        type: string
+      id:
         type: integer
-      meetings_per_week:
+      name:
+        type: string
+    type: object
+  models.DictionaryRequest:
+    properties:
+      code:
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  models.EmployeeCreateRequest:
+    properties:
+      birth_date:
+        type: string
+      department_id:
         type: integer
-      monthly_hours_worked:
-        type: integer
-      overtime_hours_per_week:
-        type: number
-      productivity_score:
-        type: number
-      remote_work:
+      first_name:
+        type: string
+      hire_date:
+        type: string
+      is_remote:
         type: boolean
-      tasks_completed_per_day:
+      last_name:
+        type: string
+      middle_name:
+        type: string
+      position_id:
         type: integer
-      updated_at:
+      salary:
+        type: number
+    required:
+    - birth_date
+    - department_id
+    - first_name
+    - hire_date
+    - last_name
+    - position_id
+    type: object
+  models.EmployeeFullResponse:
+    properties:
+      birth_date:
+        type: string
+      created_at:
+        type: string
+      department:
+        type: string
+      fire_date:
+        type: string
+      first_name:
+        type: string
+      hire_date:
+        type: string
+      id:
+        type: integer
+      is_remote:
+        type: boolean
+      last_name:
+        type: string
+      middle_name:
+        type: string
+      position:
+        type: string
+      salary:
+        type: number
+    type: object
+  models.EmployeeWorkSummary:
+    properties:
+      calls_count:
+        type: integer
+      completed_tasks:
+        type: integer
+      employee_id:
+        type: integer
+      end_work_day:
+        type: string
+      full_name:
+        type: string
+      productivity:
+        type: integer
+      satisfaction:
+        type: integer
+      start_work_day:
         type: string
       work_life_balance:
-        type: string
-      years_at_company:
         type: integer
+    type: object
+  models.Position:
+    properties:
+      code:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
     type: object
   models.ProfileUpdateRequest:
     properties:
-      name:
+      first_name:
         example: Иван
+        type: string
+      last_name:
+        example: Иванов
+        type: string
+      middle_name:
+        example: Иванович
         type: string
       password:
         example: secret123
@@ -85,7 +224,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: Возвращает средние показатели сотрудников текущего пользователя
+      description: Возвращает показатели сотрудников (admin/manager — все, employee
+        — свои)
       parameters:
       - description: Начало периода
         in: query
@@ -101,10 +241,7 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              format: float64
-              type: number
-            type: object
+            $ref: '#/definitions/controllers.DashboardSummaryResponse'
         "401":
           description: Unauthorized
           schema:
@@ -116,17 +253,22 @@ paths:
       summary: Получение сводных показателей эффективности
       tags:
       - dashboard
-  /api/employees:
+  /api/dict/access-groups:
     get:
-      description: Возвращает все загруженные данные пользователя
+      description: |-
+        Возвращает список отделов (без удалённых)
+        Возвращает список должностей (без удалённых)
+        Возвращает групп доступа (без удалённых)
       produces:
+      - application/json
+      - application/json
       - application/json
       responses:
         "200":
           description: OK
           schema:
             items:
-              $ref: '#/definitions/models.EmployeeSwagger'
+              $ref: '#/definitions/models.AccessGroup'
             type: array
         "401":
           description: Unauthorized
@@ -136,13 +278,44 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: Список сотрудников текущего пользователя
+      - BearerAuth: []
+      - BearerAuth: []
+      summary: Получить список групп доступа
       tags:
-      - employees
-  /api/profile:
-    get:
-      description: Возвращает email и имя пользователя, авторизованного через JWT
+      - dictionary
+      - dictionary
+      - dictionary
+    post:
+      consumes:
+      - application/json
+      - application/json
+      - application/json
+      description: |-
+        Создание новой записи в справочнике отделов
+        Добавляет новую должность в справочник
+        Создаёт новую группу доступа
+      parameters:
+      - description: Данные справочника
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.DictionaryRequest'
+      - description: Данные должности
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.DictionaryRequest'
+      - description: Данные группы доступа
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.DictionaryRequest'
       produces:
+      - application/json
+      - application/json
       - application/json
       responses:
         "200":
@@ -152,14 +325,60 @@ paths:
               allOf:
               - type: string
               - properties:
-                  email:
-                    type: string
-                  name:
+                  message:
                     type: string
                 type: object
             type: object
-        "401":
-          description: Unauthorized
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - BearerAuth: []
+      - BearerAuth: []
+      summary: Создать группу доступа
+      tags:
+      - dictionary
+      - dictionary
+      - dictionary
+  /api/dict/access-groups/{id}:
+    delete:
+      description: |-
+        Помечает запись как удалённую (soft delete)
+        Помечает должность как удалённую
+        Помечает группу доступа как удалённую
+      parameters:
+      - description: ID записи
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ID должности
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ID группы доступа
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      - application/json
+      - application/json
+      responses:
+        "200":
+          description: OK
           schema:
             additionalProperties:
               allOf:
@@ -169,22 +388,632 @@ paths:
                     type: string
                 type: object
             type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       security:
       - BearerAuth: []
-      summary: Получить профиль текущего пользователя
+      - BearerAuth: []
+      - BearerAuth: []
+      summary: Удалить должность
       tags:
-      - profile
+      - dictionary
+      - dictionary
+      - dictionary
     put:
       consumes:
       - application/json
-      description: Позволяет изменить имя и/или пароль текущего пользователя
+      - application/json
+      - application/json
+      description: |-
+        Обновляет существующую запись справочника
+        Обновляет данные должности
+        Обновляет данные группы доступа
       parameters:
-      - description: Данные для обновления
+      - description: ID записи
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Данные справочника
         in: body
-        name: profile
+        name: data
         required: true
         schema:
-          $ref: '#/definitions/models.ProfileUpdateRequest'
+          $ref: '#/definitions/models.DictionaryRequest'
+      - description: ID должности
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Новые данные должности
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.DictionaryRequest'
+      - description: ID группы доступа
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Новые данные группы доступа
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.DictionaryRequest'
+      produces:
+      - application/json
+      - application/json
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              allOf:
+              - type: string
+              - properties:
+                  message:
+                    type: string
+                type: object
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - BearerAuth: []
+      - BearerAuth: []
+      summary: Обновить группу доступа
+      tags:
+      - dictionary
+      - dictionary
+      - dictionary
+  /api/dict/departments:
+    get:
+      description: |-
+        Возвращает список отделов (без удалённых)
+        Возвращает список должностей (без удалённых)
+        Возвращает групп доступа (без удалённых)
+      produces:
+      - application/json
+      - application/json
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.AccessGroup'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - BearerAuth: []
+      - BearerAuth: []
+      summary: Получить список групп доступа
+      tags:
+      - dictionary
+      - dictionary
+      - dictionary
+    post:
+      consumes:
+      - application/json
+      - application/json
+      - application/json
+      description: |-
+        Создание новой записи в справочнике отделов
+        Добавляет новую должность в справочник
+        Создаёт новую группу доступа
+      parameters:
+      - description: Данные справочника
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.DictionaryRequest'
+      - description: Данные должности
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.DictionaryRequest'
+      - description: Данные группы доступа
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.DictionaryRequest'
+      produces:
+      - application/json
+      - application/json
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              allOf:
+              - type: string
+              - properties:
+                  message:
+                    type: string
+                type: object
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - BearerAuth: []
+      - BearerAuth: []
+      summary: Создать группу доступа
+      tags:
+      - dictionary
+      - dictionary
+      - dictionary
+  /api/dict/departments/{id}:
+    delete:
+      description: |-
+        Помечает запись как удалённую (soft delete)
+        Помечает должность как удалённую
+        Помечает группу доступа как удалённую
+      parameters:
+      - description: ID записи
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ID должности
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ID группы доступа
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      - application/json
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              allOf:
+              - type: string
+              - properties:
+                  message:
+                    type: string
+                type: object
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - BearerAuth: []
+      - BearerAuth: []
+      summary: Удалить должность
+      tags:
+      - dictionary
+      - dictionary
+      - dictionary
+    put:
+      consumes:
+      - application/json
+      - application/json
+      - application/json
+      description: |-
+        Обновляет существующую запись справочника
+        Обновляет данные должности
+        Обновляет данные группы доступа
+      parameters:
+      - description: ID записи
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Данные справочника
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.DictionaryRequest'
+      - description: ID должности
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Новые данные должности
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.DictionaryRequest'
+      - description: ID группы доступа
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Новые данные группы доступа
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.DictionaryRequest'
+      produces:
+      - application/json
+      - application/json
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              allOf:
+              - type: string
+              - properties:
+                  message:
+                    type: string
+                type: object
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - BearerAuth: []
+      - BearerAuth: []
+      summary: Обновить группу доступа
+      tags:
+      - dictionary
+      - dictionary
+      - dictionary
+  /api/dict/positions:
+    get:
+      description: |-
+        Возвращает список отделов (без удалённых)
+        Возвращает список должностей (без удалённых)
+        Возвращает групп доступа (без удалённых)
+      produces:
+      - application/json
+      - application/json
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.AccessGroup'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - BearerAuth: []
+      - BearerAuth: []
+      summary: Получить список групп доступа
+      tags:
+      - dictionary
+      - dictionary
+      - dictionary
+    post:
+      consumes:
+      - application/json
+      - application/json
+      - application/json
+      description: |-
+        Создание новой записи в справочнике отделов
+        Добавляет новую должность в справочник
+        Создаёт новую группу доступа
+      parameters:
+      - description: Данные справочника
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.DictionaryRequest'
+      - description: Данные должности
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.DictionaryRequest'
+      - description: Данные группы доступа
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.DictionaryRequest'
+      produces:
+      - application/json
+      - application/json
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              allOf:
+              - type: string
+              - properties:
+                  message:
+                    type: string
+                type: object
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - BearerAuth: []
+      - BearerAuth: []
+      summary: Создать группу доступа
+      tags:
+      - dictionary
+      - dictionary
+      - dictionary
+  /api/dict/positions/{id}:
+    delete:
+      description: |-
+        Помечает запись как удалённую (soft delete)
+        Помечает должность как удалённую
+        Помечает группу доступа как удалённую
+      parameters:
+      - description: ID записи
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ID должности
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ID группы доступа
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      - application/json
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              allOf:
+              - type: string
+              - properties:
+                  message:
+                    type: string
+                type: object
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - BearerAuth: []
+      - BearerAuth: []
+      summary: Удалить должность
+      tags:
+      - dictionary
+      - dictionary
+      - dictionary
+    put:
+      consumes:
+      - application/json
+      - application/json
+      - application/json
+      description: |-
+        Обновляет существующую запись справочника
+        Обновляет данные должности
+        Обновляет данные группы доступа
+      parameters:
+      - description: ID записи
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Данные справочника
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.DictionaryRequest'
+      - description: ID должности
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Новые данные должности
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.DictionaryRequest'
+      - description: ID группы доступа
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Новые данные группы доступа
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.DictionaryRequest'
+      produces:
+      - application/json
+      - application/json
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              allOf:
+              - type: string
+              - properties:
+                  message:
+                    type: string
+                type: object
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - BearerAuth: []
+      - BearerAuth: []
+      summary: Обновить группу доступа
+      tags:
+      - dictionary
+      - dictionary
+      - dictionary
+  /api/employees:
+    get:
+      description: admin и manager видят всех, employee — только себя
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.EmployeeFullResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Список сотрудников
+      tags:
+      - employees
+    post:
+      consumes:
+      - application/json
+      description: Создаёт сотрудника и связанные кадровые данные (Department, Position,
+        HR-поля)
+      parameters:
+      - description: Данные сотрудника и кадровые данные
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.EmployeeCreateRequest'
       produces:
       - application/json
       responses:
@@ -203,28 +1032,41 @@ paths:
           description: Bad Request
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  message:
-                    type: string
-                type: object
+              type: string
             type: object
-        "401":
-          description: Unauthorized
+        "403":
+          description: Forbidden
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  message:
-                    type: string
-                type: object
+              type: string
             type: object
         "500":
           description: Internal Server Error
           schema:
             additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Создать сотрудника
+      tags:
+      - employees
+  /api/employees/{id}:
+    delete:
+      description: Помечает сотрудника и его кадровые данные как удалённые (soft delete)
+      parameters:
+      - description: ID сотрудника
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
               allOf:
               - type: string
               - properties:
@@ -232,9 +1074,277 @@ paths:
                     type: string
                 type: object
             type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       security:
       - BearerAuth: []
-      summary: Обновить профиль пользователя
+      summary: Удалить сотрудника
+      tags:
+      - employees
+    get:
+      parameters:
+      - description: ID сотрудника
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.EmployeeFullResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получить сотрудника по ID
+      tags:
+      - employees
+    put:
+      consumes:
+      - application/json
+      description: Обновляет персональные и кадровые данные сотрудника
+      parameters:
+      - description: ID сотрудника
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Новые данные сотрудника
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.EmployeeCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              allOf:
+              - type: string
+              - properties:
+                  message:
+                    type: string
+                type: object
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Обновить сотрудника
+      tags:
+      - employees
+  /api/employees/work:
+    get:
+      consumes:
+      - application/json
+      description: employee видит только свои данные, admin и manager — все
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.EmployeeWorkSummary'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получить таблицу сотрудников
+      tags:
+      - employees
+  /api/employees/work/{employee_id}:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет рабочий день, процессы и метрики сотрудника по employee_id
+        (soft delete)
+      parameters:
+      - description: ID сотрудника
+        in: path
+        name: employee_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Удалить сотрудника
+      tags:
+      - employees
+  /api/profile:
+    get:
+      description: |-
+        Возвращает данные авторизованного пользователя и связанного с ним сотрудника.
+
+        Данные пользователя:
+        - login
+
+        Данные сотрудника:
+        - фамилия
+        - имя
+        - отчество
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Профиль пользователя
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Неавторизован
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Пользователь или сотрудник не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получить профиль текущего пользователя
+      tags:
+      - profile
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Позволяет изменить пароль пользователя и/или ФИО сотрудника.
+
+        Можно передавать только те поля, которые требуется изменить.
+      parameters:
+      - description: Данные для обновления профиля
+        in: body
+        name: profile
+        required: true
+        schema:
+          $ref: '#/definitions/models.ProfileUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Профиль успешно обновлён
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Неверные данные
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Неавторизован
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Пользователь или сотрудник не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка при обновлении профиля
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Обновить профиль текущего пользователя
       tags:
       - profile
   /api/upload:
@@ -278,7 +1388,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Получает массив объектов Employee и сохраняет их в БД
+      description: Получает массив объектов с данными сотрудников и сохраняет их в
+        БД
       parameters:
       - description: Данные сотрудников для записи
         in: body
@@ -286,7 +1397,7 @@ paths:
         required: true
         schema:
           items:
-            $ref: '#/definitions/models.Employee'
+            type: object
           type: array
       produces:
       - application/json
@@ -347,36 +1458,6 @@ paths:
               type: string
             type: object
       summary: Вход пользователя
-      tags:
-      - auth
-  /auth/register:
-    post:
-      consumes:
-      - application/json
-      description: Регистрация создает новый аккаунт пользователя
-      parameters:
-      - description: User payload
-        in: body
-        name: payload
-        required: true
-        schema:
-          $ref: '#/definitions/controllers.RegisterRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Регистрация нового пользователя
       tags:
       - auth
 securityDefinitions:

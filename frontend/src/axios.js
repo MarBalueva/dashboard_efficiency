@@ -8,7 +8,6 @@ const api = axios.create({
   timeout: 10000,
 })
 
-// при загрузке приложения — подставляем токен, если он есть
 const token = localStorage.getItem('token')
 if (token) {
   api.defaults.headers.common.Authorization = `Bearer ${token}`

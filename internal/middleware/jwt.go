@@ -48,7 +48,18 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		c.Set("user_id", claims["user_id"])
+		c.Set("user_id", uint(claims["user_id"].(float64)))
+
+		if g, ok := claims["groups"].([]interface{}); ok {
+			strGroups := make([]string, 0, len(g))
+			for _, gr := range g {
+				strGroups = append(strGroups, gr.(string))
+			}
+			c.Set("groups", strGroups)
+		} else {
+			c.Set("groups", []string{})
+		}
+
 		c.Next()
 	}
 }

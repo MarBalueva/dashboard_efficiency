@@ -1,6 +1,5 @@
 <template>
   <aside class="sidebar">
-    <!-- Верхний логотип -->
     <div class="sidebar-top">
       <div class="company-icon">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
@@ -10,7 +9,6 @@
       </div>
     </div>
 
-    <!-- Среднее меню -->
     <nav class="sidebar-middle">
       <router-link
         to="/dashboard"
@@ -20,6 +18,22 @@
         <svg width="25" height="25" viewBox="0 0 24 24" fill="none">
           <path d="M3 13h8V3H3v10zM13 21h8V11h-8v10zM13 3v6h8V3h-8zM3 21h8v-6H3v6z"
                 fill="currentColor"/>
+        </svg>
+      </router-link>
+
+      <router-link
+        to="/dict"
+        class="icon-btn"
+        :class="{ active: isActive('/dict') }"
+        title="Справочники"
+      >
+        <svg width="25" height="25" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M4 6h16M4 10h16M4 14h16M4 18h16"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
         </svg>
       </router-link>
 
@@ -34,7 +48,6 @@
         </svg>
       </router-link>
 
-      <!-- Новый пункт: список сотрудников -->
       <router-link
         to="/employees"
         class="icon-btn"
@@ -44,9 +57,23 @@
           <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 2.07 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" fill="currentColor"/>
         </svg>
       </router-link>
+
+          <router-link
+      to="/employees/work"
+      class="icon-btn"
+      :class="{ active: isActive('/employees/work') }"
+      title="Рабочие процессы"
+    >
+      <svg width="25" height="25" viewBox="0 0 24 24" fill="none">
+    <circle cx="5" cy="12" r="2" stroke="currentColor" stroke-width="2"/>
+    <circle cx="12" cy="6" r="2" stroke="currentColor" stroke-width="2"/>
+    <circle cx="19" cy="12" r="2" stroke="currentColor" stroke-width="2"/>
+    <path d="M5 12 L12 6 L19 12" stroke="currentColor" stroke-width="2" fill="none"/>
+    <path d="M12 6 L12 18" stroke="currentColor" stroke-width="2"/>
+  </svg>
+    </router-link>
     </nav>
 
-    <!-- Нижняя часть -->
     <div class="sidebar-bottom">
       <router-link to="/profile" class="icon-btn" :class="{ active: isActive('/profile') }">
         <svg width="25" height="25" viewBox="0 0 24 24" fill="none">
@@ -80,7 +107,6 @@ function logout() {
 </script>
 
 <style scoped>
-/* Сайдбар */
 .sidebar {
   width: 80px;
   height: 90vh;

@@ -7,45 +7,74 @@ import (
 )
 
 type Employee struct {
-	gorm.Model
-	EmployeeID           string  `gorm:"not null;index:emp_user_unique,unique" json:"employee_id"`
-	Age                  int     `json:"age"`
-	Department           string  `json:"department"`
-	JobLevel             string  `json:"job_level"`
-	YearsAtCompany       int     `json:"years_at_company"`
-	MonthlyHoursWorked   int     `json:"monthly_hours_worked"`
-	RemoteWork           bool    `json:"remote_work"`
-	MeetingsPerWeek      int     `json:"meetings_per_week"`
-	TasksCompletedPerDay int     `json:"tasks_completed_per_day"`
-	OvertimeHoursPerWeek float64 `json:"overtime_hours_per_week"`
-	WorkLifeBalance      string  `json:"work_life_balance"`
-	JobSatisfaction      int     `json:"job_satisfaction"`
-	ProductivityScore    float64 `json:"productivity_score"`
-	AnnualSalary         float64 `json:"annual_salary"`
-	AbsencesPerYear      int     `json:"absences_per_year"`
+	ID        uint `gorm:"primaryKey"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt gorm.DeletedAt `gorm:"index" swaggerignore:"true"`
 
-	UserID     uint      `gorm:"index:emp_user_unique,unique" json:"user_id"`
-	UploadedAt time.Time `json:"uploaded_at"` // дата загрузки
+	LastName   string `gorm:"size:255;not null"`
+	FirstName  string `gorm:"size:255;not null"`
+	MiddleName string `gorm:"size:255"`
 }
 
-type EmployeeSwagger struct {
-	ID                   uint    `json:"id"`
-	CreatedAt            string  `json:"created_at"`
-	UpdatedAt            string  `json:"updated_at"`
-	DeletedAt            *string `json:"deleted_at,omitempty"`
-	EmployeeID           string  `json:"employee_id"`
-	Age                  int     `json:"age"`
-	Department           string  `json:"department"`
-	JobLevel             string  `json:"job_level"`
-	YearsAtCompany       int     `json:"years_at_company"`
-	MonthlyHoursWorked   int     `json:"monthly_hours_worked"`
-	RemoteWork           bool    `json:"remote_work"`
-	MeetingsPerWeek      int     `json:"meetings_per_week"`
-	TasksCompletedPerDay int     `json:"tasks_completed_per_day"`
-	OvertimeHoursPerWeek float64 `json:"overtime_hours_per_week"`
-	WorkLifeBalance      string  `json:"work_life_balance"`
-	JobSatisfaction      int     `json:"job_satisfaction"`
-	ProductivityScore    float64 `json:"productivity_score"`
-	AnnualSalary         float64 `json:"annual_salary"`
-	AbsencesPerYear      int     `json:"absences_per_year"`
+type EmployeeHR struct {
+	ID uint `gorm:"primaryKey"`
+
+	DepartmentID uint
+	Department   Department `gorm:"foreignKey:DepartmentID"`
+
+	PositionID uint
+	Position   Position `gorm:"foreignKey:PositionID"`
+
+	EmployeeID uint
+	Employee   Employee `gorm:"foreignKey:EmployeeID"`
+
+	IsRemote  bool
+	BirthDate time.Time
+	HireDate  time.Time
+	FireDate  *time.Time
+	Salary    float64
+
+	CreatedAt time.Time
+	DeletedAt gorm.DeletedAt `gorm:"index" swaggerignore:"true"`
+}
+
+type ProfileUpdateRequest struct {
+	Password string `json:"password" example:"secret123"`
+
+	LastName   string `json:"last_name" example:"Иванов"`
+	FirstName  string `json:"first_name" example:"Иван"`
+	MiddleName string `json:"middle_name" example:"Иванович"`
+}
+
+type EmployeeFullResponse struct {
+	ID uint `json:"id"`
+
+	LastName   string `json:"last_name"`
+	FirstName  string `json:"first_name"`
+	MiddleName string `json:"middle_name"`
+
+	Department string `json:"department"`
+	Position   string `json:"position"`
+
+	IsRemote  bool       `json:"is_remote"`
+	BirthDate time.Time  `json:"birth_date"`
+	HireDate  time.Time  `json:"hire_date"`
+	FireDate  *time.Time `json:"fire_date"`
+	Salary    float64    `json:"salary"`
+
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type EmployeeCreateRequest struct {
+	LastName   string `json:"last_name" binding:"required"`
+	FirstName  string `json:"first_name" binding:"required"`
+	MiddleName string `json:"middle_name"`
+
+	DepartmentID uint    `json:"department_id" binding:"required"`
+	PositionID   uint    `json:"position_id" binding:"required"`
+	IsRemote     bool    `json:"is_remote"`
+	BirthDate    string  `json:"birth_date" binding:"required"`
+	HireDate     string  `json:"hire_date" binding:"required"`
+	Salary       float64 `json:"salary"`
 }

@@ -27,8 +27,16 @@ func Migrate() error {
 	}
 
 	err := DB.AutoMigrate(
+		&models.AccessGroup{},
+		&models.Department{},
 		&models.Employee{},
+		&models.EmployeeHR{},
+		&models.Position{},
+		&models.SatisfactionMetric{},
 		&models.User{},
+		&models.UserAccessGroup{},
+		&models.WorkDay{},
+		&models.WorkProcess{},
 	)
 
 	if err != nil {

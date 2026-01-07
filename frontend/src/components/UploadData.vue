@@ -9,7 +9,7 @@
       </header>
 
       <section class="upload-area">
-        <!-- Блок загрузки файла -->
+        <!-- Загрузка файла -->
         <div class="upload-inner" v-if="!previewData.length">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
             <path d="M11 16h2v-6h3l-4-5-4 5h3v6zM5 20h14v-2H5v2z" fill="#4F46E5"/>
@@ -33,33 +33,33 @@
           </div>
         </div>
 
-        <!-- Блок предпросмотра -->
+        <!-- Предпросмотр данных -->
         <div v-else class="upload-inner preview-inner">
           <h2>Предпросмотр загруженных данных</h2>
           <div class="table-wrapper">
             <table>
               <thead>
                 <tr>
-                  <th v-for="(header, idx) in headers" :key="idx">{{ header }}</th>
+                  <th>EmployeeID</th>
+                  <th>StartWorkDay</th>
+                  <th>EndWorkDay</th>
+                  <th>CallsCount</th>
+                  <th>CompletedTasks</th>
+                  <th>WorkLifeBalance</th>
+                  <th>Satisfaction</th>
+                  <th>Productivity</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(row, rIdx) in previewData" :key="rIdx">
+                <tr v-for="(row, idx) in previewData" :key="idx">
                   <td>{{ row.employee_id }}</td>
-                  <td>{{ row.age }}</td>
-                  <td>{{ row.department }}</td>
-                  <td>{{ row.job_level }}</td>
-                  <td>{{ row.years_at_company }}</td>
-                  <td>{{ row.monthly_hours_worked }}</td>
-                  <td>{{ row.remote_work }}</td>
-                  <td>{{ row.meetings_per_week }}</td>
-                  <td>{{ row.tasks_completed_per_day }}</td>
-                  <td>{{ row.overtime_hours_per_week }}</td>
+                  <td>{{ formatDateTime(row.start_work_day) }}</td>
+                  <td>{{ formatDateTime(row.end_work_day) }}</td>
+                  <td>{{ row.calls_count }}</td>
+                  <td>{{ row.completed_tasks }}</td>
                   <td>{{ row.work_life_balance }}</td>
-                  <td>{{ row.job_satisfaction }}</td>
-                  <td>{{ row.productivity_score }}</td>
-                  <td>{{ row.annual_salary }}</td>
-                  <td>{{ row.absences_per_year }}</td>
+                  <td>{{ row.satisfaction }}</td>
+                  <td>{{ row.productivity }}</td>
                 </tr>
               </tbody>
             </table>
@@ -88,12 +88,6 @@ const fileName = ref('')
 const message = ref('')
 const messageType = ref('')
 const previewData = ref([])
-
-const headers = [
-  'EmployeeID', 'Age', 'Department', 'JobLevel', 'YearsAtCompany', 'MonthlyHoursWorked',
-  'RemoteWork', 'MeetingsPerWeek', 'TasksCompletedPerDay', 'OvertimeHoursPerWeek',
-  'WorkLifeBalance', 'JobSatisfaction', 'ProductivityScore', 'AnnualSalary', 'AbsencesPerYear'
-]
 
 function handleFile(f) {
   message.value = ''
@@ -142,16 +136,22 @@ async function confirmUpload() {
   try {
     await api.post('/api/upload/confirm', previewData.value)
     alert('Данные успешно сохранены')
-    router.push('/employees')
+    router.push('/employees/work')
   } catch (err) {
     alert(err.response?.data?.message || 'Ошибка при сохранении')
   }
+}
+
+function formatDateTime(date) {
+  if (!date) return '—'
+  const d = new Date(date)
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
 }
 </script>
 
 <style scoped>
 .upload-inner { 
-  width: 640px; 
+  width: 700px; 
   border-radius: 12px; 
   background: #fff; 
   padding: 36px; 
@@ -204,19 +204,17 @@ async function confirmUpload() {
 
 .btn-template:hover { background:#E5E7EB; }
 
-/* отдельный блок для предпросмотра */
 .preview-inner {
   display: flex;
   flex-direction: column;
-  align-items: stretch; /* растягиваем контент на всю ширину */
+  align-items: stretch; 
   gap: 16px;
   text-align: center;
 }
 
-/* кнопки предпросмотра */
 .preview-buttons {
   display: flex;
-  justify-content: center; /* по горизонтали центр */
+  justify-content: center; 
   gap: 16px;
 }
 
@@ -227,7 +225,7 @@ async function confirmUpload() {
   border-radius: 8px;
   cursor: pointer;
   display: flex;
-  justify-content: center; /* текст по центру */
+  justify-content: center; 
   align-items: center;
   text-align: center;
 }
@@ -246,16 +244,14 @@ async function confirmUpload() {
 
 .table-wrapper {
   width: 100%;
-  max-height: 400px;
   overflow-x: auto;
-  overflow-y: auto;
   border: 1px solid #ddd;
   margin-bottom: 16px;
 }
 
 .table-wrapper table {
   border-collapse: collapse;
-  min-width: 1200px;
+  min-width: 900px;
 }
 
 th, td {

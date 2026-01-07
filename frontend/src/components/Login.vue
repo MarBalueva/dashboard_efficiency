@@ -2,13 +2,15 @@
   <div class="auth-wrapper">
     <div class="auth-card">
       <h2 style="margin-bottom: 8px;">Вход</h2>
-      <p style="margin-bottom: 18px; color:#64748B;">Введите данные для входа</p>
+      <p style="margin-bottom: 18px; color:#64748B;">
+        Введите логин и пароль
+      </p>
 
       <input
-        v-model="email"
-        :class="['input', errorField === 'email' || errorField === 'both' ? 'input--error' : '']"
-        type="email"
-        placeholder="Email"
+        v-model="login"
+        :class="['input', errorField === 'login' || errorField === 'both' ? 'input--error' : '']"
+        type="text"
+        placeholder="Логин"
         @input="clearFieldError"
       />
 
@@ -20,16 +22,15 @@
         @input="clearFieldError"
       />
 
-      <button class="btn-indigo" @click="login" :disabled="loading">
+      <button class="btn-indigo" @click="loginUser" :disabled="loading">
         {{ loading ? 'Вход...' : 'Войти' }}
       </button>
 
-      <div class="hint" style="margin-top:18px;">
-        Нет аккаунта?
-        <router-link to="/register">Зарегистрироваться</router-link>
-      </div>
-
-      <div v-if="serverMessage" class="error-text" :style="{ color: serverIsError ? '#EF4444' : '#10B981' }">
+      <div
+        v-if="serverMessage"
+        class="error-text"
+        :style="{ color: serverIsError ? '#EF4444' : '#10B981' }"
+      >
         {{ serverMessage }}
       </div>
     </div>
@@ -42,55 +43,47 @@ import { useRouter } from 'vue-router'
 import api from '../axios'
 
 const router = useRouter()
-const email = ref('')
+
+const login = ref('')
 const password = ref('')
 const loading = ref(false)
 
-const errorField = ref('')        // '', 'email', 'password', 'both'
-const serverMessage = ref('')     // текст для показа
-const serverIsError = ref(true)   // true -> red, false -> success
+const errorField = ref('')
+const serverMessage = ref('')
+const serverIsError = ref(true)
 
 function clearFieldError() {
   errorField.value = ''
   serverMessage.value = ''
 }
 
-function mapServerErrorToUI(errCode, msg) {
-  // errCode ожидается как короткий код, например: "user_not_found", "wrong_password", "invalid_input", "email_exists"
-  if (!errCode) {
-    serverMessage.value = msg || 'Ошибка сервера, попробуйте позже'
-    serverIsError.value = true
-    return
-  }
-
-  switch (errCode) {
+function mapServerErrorToUI(code, message) {
+  switch (code) {
     case 'user_not_found':
-      errorField.value = 'email'
-      serverMessage.value = msg || 'Пользователь с таким email не найден'
+      errorField.value = 'login'
+      serverMessage.value = message || 'Пользователь не найден'
       break
     case 'wrong_password':
       errorField.value = 'password'
-      serverMessage.value = msg || 'Неверный пароль'
+      serverMessage.value = message || 'Неверный пароль'
       break
     case 'invalid_input':
-      // message может содержать подсказку
       errorField.value = 'both'
-      serverMessage.value = msg || 'Проверьте введённые данные'
+      serverMessage.value = message || 'Проверьте введённые данные'
       break
     default:
-      // на всякий случай: если сервис вернул общий код
       errorField.value = 'both'
-      serverMessage.value = msg || 'Неверный email или пароль'
+      serverMessage.value = message || 'Ошибка авторизации'
   }
   serverIsError.value = true
 }
 
-async function login() {
-  serverMessage.value = ''
+async function loginUser() {
   errorField.value = ''
+  serverMessage.value = ''
 
-  if (!email.value || !password.value) {
-    errorField.value = !email.value && !password.value ? 'both' : (!email.value ? 'email' : 'password')
+  if (!login.value || !password.value) {
+    errorField.value = !login.value && !password.value ? 'both' : (!login.value ? 'login' : 'password')
     serverMessage.value = 'Заполните все поля'
     serverIsError.value = true
     return
@@ -99,7 +92,7 @@ async function login() {
   loading.value = true
   try {
     const res = await api.post('/auth/login', {
-      email: email.value,
+      login: login.value,
       password: password.value
     })
 
@@ -116,19 +109,17 @@ async function login() {
     serverMessage.value = 'Успешный вход'
     serverIsError.value = false
 
-    // краткая пауза, чтобы пользователь увидел сообщение
-    setTimeout(() => router.push('/dashboard'), 400)
+    setTimeout(() => {
+      router.push('/dashboard')
+    }, 300)
   } catch (err) {
-    // ожидаем формат: { error: "code", message: "текст" }
     const resp = err.response
-    if (resp && resp.data) {
-      const code = resp.data.error
-      const msg = resp.data.message || resp.data.error || resp.data
-      mapServerErrorToUI(code, msg)
+    if (resp?.data) {
+      mapServerErrorToUI(resp.data.error, resp.data.message)
     } else {
+      errorField.value = 'both'
       serverMessage.value = 'Ошибка сети или сервера'
       serverIsError.value = true
-      errorField.value = 'both'
     }
   } finally {
     loading.value = false

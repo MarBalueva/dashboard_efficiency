@@ -30,19 +30,6 @@ import (
 // @Router /api/upload [post]
 // @Security BearerAuth
 func UploadEmployees(c *gin.Context) {
-	userIDRaw, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized"})
-		return
-	}
-
-	userIDFloat, ok := userIDRaw.(float64)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "invalid user id"})
-		return
-	}
-	userID := uint(userIDFloat)
-
 	file, err := c.FormFile("file")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "файл обязателен"})
@@ -54,13 +41,13 @@ func UploadEmployees(c *gin.Context) {
 	c.SaveUploadedFile(file, tempPath)
 	defer os.Remove(tempPath)
 
-	var rows []models.Employee
+	var preview []map[string]interface{}
 	var parseErr error
 
 	if strings.HasSuffix(file.Filename, ".csv") {
-		rows, parseErr = processCSV(tempPath, userID)
+		preview, parseErr = processCSV(tempPath)
 	} else if strings.HasSuffix(file.Filename, ".xlsx") || strings.HasSuffix(file.Filename, ".xls") {
-		rows, parseErr = processExcel(tempPath, userID)
+		preview, parseErr = processExcel(tempPath)
 	} else {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "только CSV или Excel"})
 		return
@@ -71,37 +58,39 @@ func UploadEmployees(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"preview": rows,
-	})
+	c.JSON(http.StatusOK, gin.H{"preview": preview})
 }
 
+// ConfirmUpload сохраняет данные сотрудников и кадровых метрик
 // @Summary Подтверждение загрузки данных сотрудников
-// @Description Получает массив объектов Employee и сохраняет их в БД
+// @Description Получает массив объектов с данными сотрудников и сохраняет их в БД
 // @Tags upload
 // @Accept json
 // @Produce json
-// @Param data body []models.Employee true "Данные сотрудников для записи"
+// @Param data body []object true "Данные сотрудников для записи"
 // @Success 200 {object} map[string]interface{} "Сообщение о добавленных/обновленных записях"
 // @Failure 400 {object} map[string]string "Ошибка при обработке данных"
 // @Failure 401 {object} map[string]string "Пользователь не авторизован"
 // @Router /api/upload/confirm [post]
 // @Security BearerAuth
 func ConfirmUpload(c *gin.Context) {
-	userIDRaw, exists := c.Get("user_id")
-	if !exists {
+	if _, exists := c.Get("user_id"); !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized"})
 		return
 	}
 
-	userIDFloat, ok := userIDRaw.(float64)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "invalid user id"})
-		return
+	type UploadRow struct {
+		EmployeeID      uint      `json:"employee_id"`
+		StartWorkDay    time.Time `json:"start_work_day"`
+		EndWorkDay      time.Time `json:"end_work_day"`
+		CallsCount      int       `json:"calls_count"`
+		CompletedTasks  int       `json:"completed_tasks"`
+		WorkLifeBalance int       `json:"work_life_balance"`
+		Satisfaction    int       `json:"satisfaction"`
+		Productivity    int       `json:"productivity"`
 	}
-	userID := uint(userIDFloat)
 
-	var rows []models.Employee
+	var rows []UploadRow
 	if err := c.ShouldBindJSON(&rows); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
@@ -109,19 +98,77 @@ func ConfirmUpload(c *gin.Context) {
 
 	added := 0
 	errors := []string{}
+	now := time.Now()
 
-	for _, emp := range rows {
-		emp.UserID = userID
-		emp.UploadedAt = time.Now()
+	for _, r := range rows {
 
-		// Если есть EmployeeID — обновляем, иначе создаем
-		if err := db.DB.Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "employee_id"}, {Name: "user_id"}},
-			UpdateAll: true,
-		}).Create(&emp).Error; err != nil {
-			errors = append(errors, fmt.Sprintf("Ошибка EmployeeID=%s: %v", emp.EmployeeID, err))
+		workDay := models.WorkDay{
+			EmployeeID:   r.EmployeeID,
+			StartWorkDay: r.StartWorkDay,
+			EndWorkDay:   r.EndWorkDay,
+			CreatedAt:    now,
+		}
+
+		if err := db.DB.
+			Clauses(clause.OnConflict{
+				Columns: []clause.Column{
+					{Name: "employee_id"},
+					{Name: "start_work_day"},
+					{Name: "end_work_day"},
+				},
+				UpdateAll: true,
+			}).
+			Create(&workDay).Error; err != nil {
+
+			errors = append(errors, fmt.Sprintf(
+				"WorkDay EmployeeID=%d: %v", r.EmployeeID, err,
+			))
 			continue
 		}
+
+		workDayID := workDay.ID
+
+		workProcess := models.WorkProcess{
+			WorkDayID:      workDayID,
+			CallsCount:     r.CallsCount,
+			CompletedTasks: r.CompletedTasks,
+			CreatedAt:      now,
+		}
+
+		if err := db.DB.
+			Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "work_day_id"}},
+				UpdateAll: true,
+			}).
+			Create(&workProcess).Error; err != nil {
+
+			errors = append(errors, fmt.Sprintf(
+				"WorkProcess WorkDayID=%d: %v", workDayID, err,
+			))
+			continue
+		}
+
+		satMetric := models.SatisfactionMetric{
+			WorkDayID:       workDayID,
+			WorkLifeBalance: r.WorkLifeBalance,
+			Satisfaction:    r.Satisfaction,
+			Productivity:    r.Productivity,
+			CreatedAt:       now,
+		}
+
+		if err := db.DB.
+			Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "work_day_id"}},
+				UpdateAll: true,
+			}).
+			Create(&satMetric).Error; err != nil {
+
+			errors = append(errors, fmt.Sprintf(
+				"SatisfactionMetric WorkDayID=%d: %v", workDayID, err,
+			))
+			continue
+		}
+
 		added++
 	}
 
@@ -131,7 +178,7 @@ func ConfirmUpload(c *gin.Context) {
 	})
 }
 
-func processCSV(path string, userID uint) ([]models.Employee, error) {
+func processCSV(path string) ([]map[string]interface{}, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось открыть CSV")
@@ -141,12 +188,13 @@ func processCSV(path string, userID uint) ([]models.Employee, error) {
 	reader := csv.NewReader(f)
 	reader.TrimLeadingSpace = true
 
-	_, err = reader.Read() // skip header
+	// Заголовок
+	_, err = reader.Read()
 	if err != nil {
 		return nil, fmt.Errorf("не удалось прочитать заголовок CSV")
 	}
 
-	var rows []models.Employee
+	var preview []map[string]interface{}
 	for {
 		row, err := reader.Read()
 		if err == io.EOF {
@@ -155,30 +203,24 @@ func processCSV(path string, userID uint) ([]models.Employee, error) {
 		if err != nil {
 			continue
 		}
-
-		emp, err := parseEmployeeRow(row)
+		data, err := parseRow(row)
 		if err != nil {
 			continue
 		}
-
-		emp.UserID = userID
-		rows = append(rows, emp)
-
+		preview = append(preview, data)
 	}
 
-	return rows, nil
+	return preview, nil
 }
 
-// --- Excel обработка с обновлением существующих ---
-func processExcel(path string, userID uint) ([]models.Employee, error) {
+func processExcel(path string) ([]map[string]interface{}, error) {
 	xlFile, err := xlsx.OpenFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось открыть Excel")
 	}
 
 	sheet := xlFile.Sheets[0]
-
-	var rows []models.Employee
+	var preview []map[string]interface{}
 
 	for i, row := range sheet.Rows {
 		if i == 0 {
@@ -190,57 +232,38 @@ func processExcel(path string, userID uint) ([]models.Employee, error) {
 			cells[j] = cell.String()
 		}
 
-		emp, err := parseEmployeeRow(cells)
+		data, err := parseRow(cells)
 		if err != nil {
 			continue
 		}
-
-		emp.UserID = userID
-		rows = append(rows, emp)
+		preview = append(preview, data)
 	}
 
-	return rows, nil
+	return preview, nil
 }
 
-// --- Парсинг строки в Employee ---
-func parseEmployeeRow(row []string) (models.Employee, error) {
-	if len(row) < 15 {
-		return models.Employee{}, fmt.Errorf("не хватает столбцов")
+func parseRow(row []string) (map[string]interface{}, error) {
+	if len(row) < 8 {
+		return nil, fmt.Errorf("не хватает столбцов")
 	}
 
-	age, _ := strconv.Atoi(row[1])
-	yearsAt, _ := strconv.Atoi(row[4])
-	monthlyHours, _ := strconv.Atoi(row[5])
-	meetings, _ := strconv.Atoi(row[7])
-	tasks, _ := strconv.Atoi(row[8])
-	overtime, _ := strconv.ParseFloat(row[9], 64)
-	jobSatisfaction, _ := strconv.Atoi(row[11])
-	productivity, _ := strconv.ParseFloat(row[12], 64)
-	annualSalary, _ := strconv.ParseFloat(row[13], 64)
-	absences, _ := strconv.Atoi(row[14])
+	employeeID, _ := strconv.Atoi(row[0])
+	startWork, _ := time.Parse(time.RFC3339, row[1])
+	endWork, _ := time.Parse(time.RFC3339, row[2])
+	calls, _ := strconv.Atoi(row[3])
+	tasks, _ := strconv.Atoi(row[4])
+	wlb, _ := strconv.Atoi(row[5])
+	satisfaction, _ := strconv.Atoi(row[6])
+	productivity, _ := strconv.Atoi(row[7])
 
-	remote := false
-	if strings.ToLower(row[6]) == "yes" ||
-		strings.ToLower(row[6]) == "true" ||
-		strings.ToLower(row[6]) == "hybrid" {
-		remote = true
-	}
-
-	return models.Employee{
-		EmployeeID:           row[0],
-		Age:                  age,
-		Department:           row[2],
-		JobLevel:             row[3],
-		YearsAtCompany:       yearsAt,
-		MonthlyHoursWorked:   monthlyHours,
-		RemoteWork:           remote,
-		MeetingsPerWeek:      meetings,
-		TasksCompletedPerDay: tasks,
-		OvertimeHoursPerWeek: overtime,
-		WorkLifeBalance:      row[10],
-		JobSatisfaction:      jobSatisfaction,
-		ProductivityScore:    productivity,
-		AnnualSalary:         annualSalary,
-		AbsencesPerYear:      absences,
+	return map[string]interface{}{
+		"employee_id":       employeeID,
+		"start_work_day":    startWork,
+		"end_work_day":      endWork,
+		"calls_count":       calls,
+		"completed_tasks":   tasks,
+		"work_life_balance": wlb,
+		"satisfaction":      satisfaction,
+		"productivity":      productivity,
 	}, nil
 }
